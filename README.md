@@ -2,21 +2,6 @@
 
 A full-stack web application for managing chemical/reagent inventory and processing seller orders. Built as part of the AasaMedChem recruitment assignment.
 
----
-
-## Live Demo
-
-- **Frontend (Vercel):** _[Add after deployment]_
-- **Backend (Railway):** _[Add after deployment]_
-
----
-
-## Demo Credentials
-
-| Role  | Email              | Password   |
-|-------|--------------------|------------|
-| Admin | admin@aasa.com     | Admin@123  |
-| Seller| seller@aasa.com    | Seller@123 |
 
 > Sellers can also self-register from the login page.
 

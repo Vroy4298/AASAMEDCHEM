@@ -53,105 +53,7 @@ Neon PostgreSQL
 
 All API routes are prefixed `/api/`. The frontend uses an Axios instance that automatically attaches the JWT from localStorage to every request. On a 401 response, the user is redirected to `/login`.
 
----
 
-## Database Schema
-
-### `users`
-| Column          | Type         | Notes |
-|-----------------|--------------|-------|
-| id              | UUID PK      | gen_random_uuid() |
-| email           | TEXT UNIQUE  | Login identifier |
-| password_hash   | TEXT         | bcrypt hash, never stored plain |
-| role            | TEXT         | `'admin'` or `'seller'` |
-| name            | TEXT         | Display name |
-| created_at      | TIMESTAMPTZ  | UTC timestamp |
-
-### `categories`
-| Column    | Type        | Notes |
-|-----------|-------------|-------|
-| id        | UUID PK     | |
-| name      | TEXT UNIQUE | e.g. "Solvents", "Reagents" |
-| created_at| TIMESTAMPTZ | |
-
-### `products`
-| Column      | Type            | Notes |
-|-------------|-----------------|-------|
-| id          | UUID PK         | |
-| name        | TEXT            | Product display name |
-| sku         | TEXT UNIQUE     | Stock-keeping unit |
-| description | TEXT            | Optional |
-| category_id | UUID FK         | References categories |
-| base_unit   | TEXT            | `g`, `kg`, `mL`, `L`, `item` — the canonical storage unit |
-| base_price  | NUMERIC(15,4)   | Price per 1 `base_unit` in INR |
-| stock_qty   | NUMERIC(20,6)   | Current stock in `base_unit` |
-| is_active   | BOOLEAN         | Soft delete — inactive products hidden from sellers |
-| created_at  | TIMESTAMPTZ     | |
-| updated_at  | TIMESTAMPTZ     | |
-
-### `orders`
-| Column     | Type       | Notes |
-|------------|------------|-------|
-| id         | UUID PK    | |
-| seller_id  | UUID FK    | References users |
-| status     | TEXT       | `pending → confirmed → fulfilled` (or `rejected`) |
-| notes      | TEXT       | Optional seller notes |
-| created_at | TIMESTAMPTZ| |
-| updated_at | TIMESTAMPTZ| |
-
-### `order_items`
-| Column        | Type          | Notes |
-|---------------|---------------|-------|
-| id            | UUID PK       | |
-| order_id      | UUID FK       | References orders |
-| product_id    | UUID FK       | References products |
-| product_name  | TEXT          | Snapshot at order time |
-| ordered_unit  | TEXT          | What the seller selected |
-| ordered_qty   | NUMERIC(20,6) | What the seller entered |
-| base_unit     | TEXT          | The product's canonical unit |
-| base_qty      | NUMERIC(20,6) | Converted from ordered_qty |
-| unit_price    | NUMERIC(15,4) | Snapshot of base_price at order time |
-| total_price   | NUMERIC(15,4) | `base_qty × unit_price` |
-| created_at    | TIMESTAMPTZ   | |
-
----
-
-## Data Type Choices — Reasoning
-
-### `NUMERIC(15, 4)` for prices
-- `FLOAT` has binary representation errors. `₹10.1` stored as float can be `₹10.09999...`
-- `NUMERIC` is exact decimal storage — no rounding errors.
-- `15` total digits, `4` decimal places → handles up to ₹99,999,999,999.9999 per unit.
-
-### `NUMERIC(20, 6)` for quantities
-- 6 decimal places to handle sub-unit precision (e.g. 0.000001 g for trace amounts).
-- 20 total digits → handles very large bulk quantities.
-
-### `TIMESTAMPTZ` for all timestamps
-- Timezone-aware. Always stored as UTC internally.
-- Safe across deployments in different timezones.
-
-### `UUID` for all IDs
-- No sequential enumeration (unlike integer IDs, users can't guess `id=1, id=2`).
-- Generated in the database with `gen_random_uuid()` — no application-level ID management.
-
----
-
-## Unit Conversion Strategy
-
-### Base Units (what gets stored in the database)
-
-| Dimension | Base Unit | Other Supported Units |
-|-----------|-----------|----------------------|
-| Weight    | `g`       | `kg`                 |
-| Volume    | `mL`      | `L`                  |
-| Count     | `item`    | —                    |
-
-**Why `g` and `mL` as bases?**  
-They are the smallest common units. Converting to them avoids fractional DB values for typical quantities:
-- 1 kg → 1000 g (clean integer)
-- 1 L → 1000 mL (clean integer)
-- 0.5 kg → 500 g (still clean)
 
 ### Conversion Factors
 
@@ -273,28 +175,6 @@ Open http://localhost:5173 in your browser.
 
 ---
 
-## Deployment
-
-### Backend → Railway
-
-1. Go to [railway.app](https://railway.app) → New Project → Deploy from GitHub
-2. Select the repo, set **Root Directory** to `server`
-3. Add environment variables (same as `.env`):
-   - `DATABASE_URL` — your Neon connection string
-   - `JWT_SECRET` — your secret
-   - `CLIENT_URL` — your Vercel frontend URL
-   - `PORT` — Railway sets this automatically
-4. Railway auto-detects Node.js and runs `npm start`
-
-### Frontend → Vercel
-
-1. Go to [vercel.com](https://vercel.com) → New Project → Import from GitHub
-2. Set **Root Directory** to `client`
-3. Add environment variable:
-   - `VITE_API_URL` — your Railway backend URL (e.g. `https://asamedchem-api.up.railway.app`)
-4. Vercel auto-detects Vite and runs `npm run build`
-
----
 
 ## How to Use Each Panel
 
@@ -316,22 +196,3 @@ Open http://localhost:5173 in your browser.
 
 ---
 
-## Git Commit Strategy
-
-All commits are small and meaningful:
-
-1. `init: project scaffold`
-2. `db: schema and seed SQL`
-3. `server: DB pool and units utility`
-4. `server: auth routes and JWT middleware`
-5. `server: category and product routes`
-6. `server: orders routes with unit conversion and stock logic`
-7. `client: auth context, protected routes, navbar`
-8. `client: login and register page`
-9. `client: admin products and inventory pages`
-10. `client: admin orders view with status controls`
-11. `client: seller browse with live price preview`
-12. `client: seller cart and order submission`
-13. `client: global CSS`
-14. `docs: README`
-15. `deploy: vercel and railway config`
